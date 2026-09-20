@@ -1,4 +1,6 @@
-public class WishlistItem {
+import java.io.Serializable;
+
+public class WishlistItem implements Serializable {
 
     private int wishlistItemId;
     private int userId;
