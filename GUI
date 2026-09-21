@@ -9,7 +9,7 @@ import java.util.List;
 
 public class IWishGUI extends JFrame {
 
-    // ---------- Theme ----------
+    // Theme 
     static final Color BG = new Color(246, 248, 255);
     static final Color CARD = Color.WHITE;
     static final Color TEXT = new Color(25, 35, 60);
@@ -52,7 +52,7 @@ public class IWishGUI extends JFrame {
         showPage("Home");
     }
 
-    // ---------- Main Layout ----------
+    //  Main Layout
     private JPanel createSidebar() {
         JPanel side = new JPanel();
         side.setPreferredSize(new Dimension(235, 0));
@@ -177,7 +177,7 @@ public class IWishGUI extends JFrame {
         return main;
     }
 
-    // ---------- Pages ----------
+    //  Pages
     private JPanel homePage() {
         JPanel p = pagePanel();
         p.setLayout(new BorderLayout(0, 18));
@@ -426,7 +426,7 @@ public class IWishGUI extends JFrame {
         return p;
     }
 
-    // ---------- Components ----------
+    // Components 
     private JPanel statCard(String icon, String number, String label, Color iconColor) {
         JPanel card = cardPanel();
         card.setLayout(new BorderLayout(12, 0));
@@ -768,7 +768,7 @@ public class IWishGUI extends JFrame {
         JOptionPane.showMessageDialog(this, msg, title, JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // ---------- Custom UI ----------
+    //  Custom UI 
     static class RoundedPanel extends JPanel {
         Color color;
         int radius;
