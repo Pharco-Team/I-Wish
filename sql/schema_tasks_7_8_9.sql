@@ -1,0 +1,57 @@
+CREATE DATABASE IF NOT EXISTS iwish;
+USE iwish;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(150) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS friendships (
+  user_id INT NOT NULL,
+  friend_id INT NOT NULL,
+  status ENUM('PENDING','ACCEPTED') NOT NULL DEFAULT 'PENDING',
+  PRIMARY KEY (user_id, friend_id),
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (friend_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  price DECIMAL(10,2) NOT NULL CHECK (price > 0)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS wishlist_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  item_id INT NOT NULL,
+  amount_collected DECIMAL(10,2) NOT NULL DEFAULT 0,
+  status ENUM('OPEN','COMPLETED') NOT NULL DEFAULT 'OPEN',
+  UNIQUE (user_id, item_id),
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (item_id) REFERENCES items(id)
+) ENGINE=InnoDB;
+
+-- Task 7
+CREATE TABLE IF NOT EXISTS contributions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  wish_item_id INT NOT NULL,
+  contributor_id INT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (wish_item_id) REFERENCES wishlist_items(id) ON DELETE CASCADE,
+  FOREIGN KEY (contributor_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+-- Tasks 8 & 9
+CREATE TABLE IF NOT EXISTS notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  type ENUM('ITEM_COMPLETED','ITEM_BOUGHT') NOT NULL,
+  message VARCHAR(500) NOT NULL,
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
