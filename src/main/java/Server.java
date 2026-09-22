@@ -58,10 +58,10 @@ public class Server {
         return running;
     }
 
-    public static void notifyUser(int userId, String message) {
+    public static void notifyUser(int userId, Notification notification) {
         ClientHandler client = ONLINE.get(userId);
         if (client != null) {
-            client.send(Response.message(message));
+            client.send(notification);
         }
     }
 
@@ -86,8 +86,8 @@ public class Server {
         ONLINE.put(userId, client);
     }
 
-    static void unregister(int userId) {
-        ONLINE.remove(userId);
+    static void unregister(int userId, ClientHandler client) {
+        ONLINE.remove(userId, client);
     }
 
     void remove(ClientHandler client) {

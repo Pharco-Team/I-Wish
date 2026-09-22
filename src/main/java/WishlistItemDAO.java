@@ -64,7 +64,12 @@ public class WishlistItemDAO {
     // This changes the item everywhere it's used (in the catalog dropdown AND in
     // everyone's wishlist that points to this item_id), since wishlist_items only
     // stores a reference (item_id) and reads the actual name/price via the JOIN.
-    public boolean updateCatalogItem(int itemId, String itemName, String itemDescription, double price) {
+    // Only the owner may edit, and the new price may not drop below what friends already paid.
+    public boolean updateCatalogItem(int userId, int itemId, String itemName, String itemDescription, double price) {
+        if (!canEdit(userId, itemId, price)) {
+            return false;
+        }
+
         String sql = "UPDATE items SET item_name = ?, item_description = ?, price = ? WHERE item_id = ?";
 
         try (Connection conn = DBConnection.getConnection();
@@ -81,6 +86,35 @@ public class WishlistItemDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    private boolean canEdit(int userId, int itemId, double price) {
+        String sql = "SELECT user_id, contributed_amount FROM wishlist_items "
+                + "WHERE item_id = ? AND is_deleted = 0";
+        boolean owner = false;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, itemId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    if (rs.getDouble("contributed_amount") > price) {
+                        return false;
+                    }
+                    if (rs.getInt("user_id") == userId) {
+                        owner = true;
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        return owner;
     }
 
     // ---------- DELETE (soft delete) ----------

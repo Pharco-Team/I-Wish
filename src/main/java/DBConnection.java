@@ -27,12 +27,9 @@ public class DBConnection {
                 }
             }
 
-            for (String sql : readSchema().split(";")) {
-                if (!sql.trim().isEmpty()) {
-                    st.execute(sql);
-                }
-            }
-            System.out.println("Database created.");
+            runScript(st, "/schema.sql");
+            runScript(st, "/demo_data.sql");
+            System.out.println("Database created with demo data.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -47,10 +44,20 @@ public class DBConnection {
         }
     }
 
-    private static String readSchema() throws IOException {
-        InputStream in = DBConnection.class.getResourceAsStream("/schema.sql");
+    private static void runScript(Statement st, String resource) throws IOException, SQLException {
+        for (String sql : read(resource).split(";")) {
+            if (!sql.trim().isEmpty()) {
+                st.execute(sql);
+            }
+        }
+    }
+
+    private static String read(String resource) throws IOException {
+        InputStream in = DBConnection.class.getResourceAsStream(resource);
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"))) {
-            return reader.lines().collect(Collectors.joining("\n"));
+            return reader.lines()
+                    .filter(line -> !line.trim().startsWith("--"))
+                    .collect(Collectors.joining("\n"));
         }
     }
 }

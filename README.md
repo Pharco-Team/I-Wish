@@ -1,119 +1,121 @@
 # I-Wish
-I-Wish Project
 
-## Server (Youssef Islam Sayeh)
+A Java desktop application where you add friends, build your wish list, browse your friends'
+wish lists, and chip in to buy them a gift. Swing client, socket server, embedded Apache Derby
+database.
 
-Run `ServerMain` and use the console: `start`, `stop`, `additem`, `exit`.
-Database is embedded Apache Derby, created automatically from `src/main/resources/schema.sql`
-on first run. `SmokeTest` starts the server, talks to it over a socket and checks the replies.
+ITI Orange Belt - Building Java Desktop Applications.
 
-### Talking to the server
+## Team roles and contributions
 
-Clients connect to port 5000 and exchange serialized `Request` / `Response` objects.
-Open the `ObjectOutputStream` **before** the `ObjectInputStream`, or both sides block.
+| Member | GitHub | Spec items | Files |
+| --- | --- | --- | --- |
+| Michael Ayman | - | 1-3: Register / Sign-in, Add / Remove friend, Accept / Decline requests | `User.java`, `UserDAO.java`, `FriendRequestDAO.java` |
+| Amir | Amir4-4 | 4-6: Create / Update / Delete wish list, View friends, View a friend's wish list | `Item.java`, `WishlistItem.java`, `WishlistItemDAO.java`, `Friend.java`, `FriendViewDAO.java` |
+| Youhana Ayoub | u7ana | 7-9: Contribute to a gift, notify the buyers, notify the receiver | `ContributionDAO.java`, `NotificationDAO.java`, `Notification.java`, `ServerConnection.java` |
+| Bichoy Naguib | - | 10: Friendly GUI | `IWishGUI.java` |
+| Youssef Islam Sayeh | Sayeh-01 | 11-14: Start / Stop, database, client connections, client requests | `Server.java`, `ClientHandler.java`, `RequestHandler.java`, `DBConnection.java`, `AdminDAO.java`, `ServerMain.java`, `Request.java`, `Response.java`, `schema.sql`, `demo_data.sql`, `SmokeTest.java` |
+
+## How to run
+
+Open the folder in NetBeans (it is a Maven project) and run the two main classes:
+
+1. `ServerMain` - type `start` in the console. The database is created on the first run.
+2. `IWishGUI` - the desktop client. Run it twice to try two users at the same time.
+
+From the command line:
+
+```
+mvn package
+java -cp "target/classes;target/lib/*" ServerMain
+java -cp target/classes IWishGUI
+```
+
+The client connects to `localhost` by default. To reach a server on another machine, pass its
+address: `java -cp target/classes IWishGUI 192.168.1.5`.
+
+### Demo accounts
+
+The database is created with demo data. Every password is `1234`.
+
+| Username | What you will see |
+| --- | --- |
+| `ahmed` | 2 friends, 2 friend requests waiting, notifications |
+| `sara` | a wish list with a partly funded gift |
+| `omar` | a gift that is already fully funded |
+| `laila`, `mona` | sent a friend request to ahmed |
+
+### Server console
+
+| Command | What it does |
+| --- | --- |
+| `start` | starts listening on port 5000 |
+| `stop` | closes all clients and shuts the database down |
+| `additem` | adds an item to the catalog (admin) |
+| `exit` | stops the server and quits |
+
+### Checking that everything works
+
+`SmokeTest` starts the server, connects two clients over real sockets and walks the whole flow:
+register, sign in, friend request, accept, add a wish, contribute, and the notifications that
+follow. It prints `All checks passed.` when the project is healthy.
+
+## Database
+
+Embedded Apache Derby - no separate database server is needed. The database folder `iwishdb/` is
+created next to the running program from `src/main/resources/schema.sql`, then filled with
+`src/main/resources/demo_data.sql`.
+
+| Table | Holds |
+| --- | --- |
+| `users` | accounts (the password is stored as a PBKDF2 hash with a salt, never as plain text) |
+| `friends` | one row per relation: `user_id_1` asked, `user_id_2` was asked, `status` is `pending` or `accepted` |
+| `items` | the shared catalog users pick their wishes from |
+| `wishlist_items` | a user's wish: which item, how much was collected, `open` or `completed` |
+| `contributions` | who paid how much toward which wish |
+| `notifications` | spec items 8 and 9, kept so a user who was offline still sees them |
+
+## How the client talks to the server
+
+Clients connect to port 5000 and exchange serialized `Request` and `Response` objects. Open the
+`ObjectOutputStream` **before** the `ObjectInputStream`, or both sides block.
 
 ```java
-Socket socket = new Socket("localhost", Server.PORT);
-ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+ServerConnection server = new ServerConnection("localhost", Server.PORT);
+server.send(new Request("user.login").put("username", "ahmed").put("password", "1234"));
 
-out.writeObject(new Request("wishlist.mine").put("userId", 3));
-out.flush();
-Response response = (Response) in.readObject();
+Response response = server.send(new Request("wishlist.mine"));
+List<WishlistItem> wishes = (List<WishlistItem>) response.getData();
 ```
+
+Everything except `user.register` and `user.login` needs a signed-in session. The server uses the
+user of that connection, so a client never sends its own user id and cannot act as somebody else.
 
 | Action | Parameters | Returns |
-|---|---|---|
-| `session.bind` | userId | confirmation (needed to receive notifications) |
+| --- | --- | --- |
+| `user.register` | username, password, email | confirmation |
+| `user.login` | username, password | the `User` |
+| `friends.list` | - | `List<Friend>` |
+| `friends.requests` | - | `List<Friend>` (people waiting for an answer) |
+| `friends.add` | username | confirmation |
+| `friends.accept` / `friends.decline` | friendId | confirmation |
+| `friends.remove` | friendId | confirmation |
+| `friends.wishlist` | friendId | `List<WishlistItem>` |
 | `wishlist.catalog` | - | `List<Item>` |
-| `wishlist.mine` | userId | `List<WishlistItem>` |
-| `wishlist.add` | userId, itemId | confirmation |
+| `wishlist.mine` | - | `List<WishlistItem>` |
+| `wishlist.add` | itemId | confirmation |
 | `wishlist.update` | itemId, itemName, itemDescription, price | confirmation |
-| `wishlist.delete` | wishlistItemId, userId | confirmation |
-| `friends.list` | userId | `List<Friend>` |
-| `friends.wishlist` | userId, friendId | `List<WishlistItem>` |
-| `admin.addItem` | itemName, itemDescription, price | confirmation |
+| `wishlist.delete` | wishlistItemId | confirmation |
+| `contribute` | wishlistItemId, amount | confirmation |
+| `notifications.list` | - | `List<Notification>` |
+| `notifications.read` | - | confirmation |
 
-Unknown actions come back as a failed `Response`, so adding new ones is just a new `case`
-in `RequestHandler`.
+Unknown actions come back as a failed `Response`, so adding a new one is just a new `case` in
+`RequestHandler`.
 
-### Sending a notification to a user
+### Notifications
 
-For spec items 8 and 9, call `Server.notifyUser(userId, "your message")` from anywhere on the
-server. It pushes a `Response` to that user if they are connected and bound.
-
-## Wishlist & Friends View (Amir)
-
-This part implements the data layer for **Wish List management**
-and **viewing a friend's wish list**.
-
-It covers spec items:
-
-* **Item 4** — Create / Update / Delete my Wish List
-* **Item 5** — View my Friends list
-* **Item 6** — View a specific Friend's Wish List
-
-### Files in this part
-
-| File                   | Responsibility                                                                                                                                        |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Item.java`            | Model for a catalog item (`item_id`, `item_name`, `item_description`, `price`)                                                                        |
-| `WishlistItem.java`    | Model representing a user's wishlist entry together with its catalog item data                                                                        |
-| `WishlistItemDAO.java` | Database access for listing the catalog, adding items to a wishlist, updating item details, deleting wishlist items, and retrieving a user's wishlist |
-| `Friend.java`          | Model representing a friend                                                                                                                           |
-| `FriendViewDAO.java`   | Database access for listing friends and viewing a specific friend's wishlist                                                                          |
-
-### Database tables used
-
-This part uses the following tables from `src/main/resources/schema.sql`:
-
-* **`items`** — stores the shared catalog of available items.
-* **`wishlist_items`** — connects a user to an item in the catalog. It also stores the contributed amount, status, and soft-delete flag.
-* **`friends`** — stores the relationship between users and its status.
-
-A friend's wishlist can only be viewed when the friendship status is **`accepted`**.
-
-> Updating an item's name, description, or price changes the corresponding row in
-> `items`. Therefore, the updated information is reflected wherever that catalog
-> item is referenced.
-
-### Database
-
-The project uses **Apache Derby** as an embedded database.
-
-The database is created automatically using:
-
-`src/main/resources/schema.sql`
-
-The Derby database is stored in the project directory as:
-
-`iwishdb/`
-
-No separate MySQL server is required.
-
-### Testing
-
-The wishlist and friends functionality can be tested through the project's
-server using the following actions:
-
-| Action             | Purpose                               |
-| ------------------ | ------------------------------------- |
-| `wishlist.catalog` | View available catalog items          |
-| `wishlist.mine`    | View the current user's wishlist      |
-| `wishlist.add`     | Add an item to a user's wishlist      |
-| `wishlist.update`  | Update catalog item information       |
-| `wishlist.delete`  | Remove an item from a user's wishlist |
-| `friends.list`     | View the user's friends               |
-| `friends.wishlist` | View a friend's wishlist              |
-
-For example:
-
-```java
-out.writeObject(new Request("wishlist.mine").put("userId", 3));
-out.flush();
-
-Response response = (Response) in.readObject();
-```
-
-The server handles these requests through `RequestHandler` and the corresponding
-DAO classes.
+When a gift becomes fully funded the server writes a `Notification` for every buyer (item 8) and
+one for the receiver naming who bought it (item 9). Notifications are pushed down the same socket
+to whoever is online, and the client shows them as a pop-up. Anyone who was offline sees them on
+the Notifications page after signing in.

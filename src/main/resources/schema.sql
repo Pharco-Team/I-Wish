@@ -35,6 +35,14 @@ CREATE TABLE contributions (
     amount DOUBLE NOT NULL
 );
 
+CREATE TABLE notifications (
+    notification_id INT NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(user_id),
+    message VARCHAR(255) NOT NULL,
+    is_read SMALLINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 INSERT INTO items (item_name, item_description, price) VALUES ('Wireless Headphones', 'Bluetooth over-ear headphones', 1800.0);
 INSERT INTO items (item_name, item_description, price) VALUES ('Mechanical Keyboard', 'RGB mechanical keyboard, blue switches', 1250.0);
 INSERT INTO items (item_name, item_description, price) VALUES ('Smart Watch', 'Fitness tracking smart watch', 2400.0);

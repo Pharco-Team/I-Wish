@@ -9,7 +9,7 @@ public class ClientHandler implements Runnable {
     private final Server server;
     private ObjectOutputStream out;
     private ObjectInputStream in;
-    private int userId;
+    private User user;
 
     public ClientHandler(Socket socket, Server server) {
         this.socket = socket;
@@ -35,12 +35,12 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    public synchronized void send(Response response) {
+    public synchronized void send(Object message) {
         if (out == null) {
             return;
         }
         try {
-            out.writeObject(response);
+            out.writeObject(message);
             out.flush();
             out.reset();
         } catch (IOException e) {
@@ -48,14 +48,22 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    void bind(int userId) {
-        this.userId = userId;
-        Server.register(userId, this);
+    void bind(User user) {
+        this.user = user;
+        Server.register(user.getUserId(), this);
+    }
+
+    User getUser() {
+        return user;
+    }
+
+    int getUserId() {
+        return user == null ? 0 : user.getUserId();
     }
 
     void close() {
-        if (userId != 0) {
-            Server.unregister(userId);
+        if (user != null) {
+            Server.unregister(user.getUserId(), this);
         }
         try {
             socket.close();
